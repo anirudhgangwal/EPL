@@ -86,20 +86,33 @@ object Assn2 {
       case _ => sys.error("arguments to addition are non-numeric")
     }
 
-    def multiply(v1: Value, v2: Value): Value =
-      sys.error("multiply: todo")
+    def multiply(v1: Value, v2: Value): Value = (v1,v2) match {
+      case (NumV(v1), NumV(v2)) => NumV(v1 * v2)
+      case _ => sys.error("arguments to multiplication are non-numeric")
+    }
+     
+    def eq(v1: Value, v2: Value): Value = (v1,v2) match {
+      case (NumV(v1), NumV(v2)) => BoolV(v1 == v2)
+      case (StringV(v1), StringV(v2)) => BoolV(v1 == v2)
+      case (BoolV(v1), BoolV(v2)) => BoolV(v1 == v2)
+      case _ => sys.error("arguments type do not match")
+    }
 
-    def eq(v1: Value, v2: Value): Value =
-      sys.error("eq: todo")
+    def length(v: Value): Value = (v) match {
+      case (StringV(v)) => NumV(v.length())
+      case _ => sys.error("expected argument type is string")
+    }
 
-    def length(v: Value): Value =
-      sys.error("length: todo")
+    def index(v1: Value, v2: Value): Value = (v1,v2) match {
+      case (StringV(v1), NumV(v2)) => StringV(v1.charAt(v2).toString())
+      case _ => sys.error("index takes a string and integer")
+    }
 
-    def index(v1: Value, v2: Value): Value =
-      sys.error("index: todo")
+    def concat(v1: Value, v2: Value): Value =(v1,v2) match {
+      case (StringV(v1),StringV(v2)) => StringV(v1 + v2)
+      case _ => sys.error("Both arguments should b strings for concatenaion")
+    }
 
-    def concat(v1: Value, v2: Value): Value =
-      sys.error("concat: todo")
   }
 
  
@@ -118,8 +131,48 @@ object Assn2 {
       Value.subtract(eval(env,e1),eval(env,e2))
     case Times(e1,e2) =>
       Value.multiply(eval(env,e1),eval(env,e2))
-      
-    case _ => sys.error("eval: todo")
+    
+    // Booleans
+    case Bool(b) => BoolV(b)
+    case Eq(e1,e2) =>
+      Value.eq(eval(env,e1),eval(env,e2))
+    case IfThenElse(e,e1,e2) =>
+      if (eval(env,e) == BoolV(true)) eval(env,e1) else eval(env,e2)
+    
+    // Strings
+    case Str(s) => StringV(s)
+    case Length(s) => Value.length(eval(env,s))
+    case Index(e1,e2) => Value.index(eval(env,e1),eval(env,e2))
+    case Concat(e1,e2) => Value.concat(eval(env,e1),eval(env,e2))
+  
+    // Variables and let-binding
+    case Var(x) => env(x)
+    case Let(x,e1,e2) => {
+      eval(env + (x -> eval(env,e1)),e2)
+    }
+    
+    //Pairing
+    case Pair(e1,e2) => PairV(eval(env,e1),eval(env,e2))
+    case First(e) => eval(env,e) match {
+      case PairV(e1,e2) => e1
+    }
+    case Second(e) => eval(env,e) match {
+      case PairV(e1,e2) => e2
+    }
+
+    //Functions
+    case Lambda(x,ty,e) => ClosureV(env,x,e)
+    case Rec(f,x,tyx,ty,e) => RecV(env,f,x,e)
+    case Apply(e1,e2) => (eval(env,e1),eval(env,e2)) match {
+      case (ClosureV(env2,x,e),v2) => {
+        eval(env2 + (x -> v2),e)
+      }
+      case (RecV(env2,f,x,e),v2) => {        
+        eval(env2 + (f -> RecV(env2,f,x,e), x -> v2),e)
+      }
+    }
+
+    case _ => sys.error("eval: Evaluation failed.")
   }
 
 
@@ -138,6 +191,14 @@ object Assn2 {
     case Plus(e1,e2) => (tyOf(ctx,e1),tyOf(ctx,e2)) match {
       case (IntTy, IntTy) => IntTy
       case _ => sys.error("non-integer arguments to +") 
+    }
+    case Minus(e1,e2) => (tyOf(ctx,e1),tyOf(ctx,e2)) match {
+      case (IntTy, IntTy) => IntTy
+      case _ => sys.error("non-integer arguments to -")
+    }
+    case Times(e1,e2) => (tyOf(ctx,e1),tyOf(ctx,e2)) match {
+      case (IntTy, IntTy) => IntTy
+      case _ => sys.error("non-integer arguments to *")
     }
 
     // Variables and let-binding
