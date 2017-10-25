@@ -1,0 +1,8 @@
+let comment = "Assumes nonnegative arguments" in 
+let rec lessthanorequal(nm: int * int) : bool = 
+  let (n,m) = nm in 
+  if (n == 0) then true 
+  else if (m == 0) then false
+  else lessthanorequal(n-1,m-1)
+in (lessthanorequal (5,6), lessthanorequal(6,5))
+

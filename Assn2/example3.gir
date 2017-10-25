@@ -1,0 +1,6 @@
+let rec power(input: int * int): int =
+  let (x,n) = input in
+  if (n == 0) then 1
+  else x * power(x,n-1)
+in
+power(2,10)

@@ -1,0 +1,2 @@
+let fun swap(x:int * int) = (snd(x), fst(x)) in 
+swap(42,17)

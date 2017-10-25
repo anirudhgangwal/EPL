@@ -1,0 +1,6 @@
+let rec slice(input: str * (int * int)) : str = 
+  let (s,p) = input in
+  let (base,len) = p in
+  if (len == 0) then ""
+  else concat(index(s,base), slice (s,(base + 1, len - 1)))
+in slice("abcdefghijklmnopqrstuvwxyz", (10, 10))

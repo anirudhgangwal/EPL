@@ -1,0 +1,4 @@
+let fun sameLastChar(input: str * str) = 
+  let (s1,s2) = input in 
+  index(s1,length(s1)-1) == index(s2,length(s2)-1)
+in sameLastChar("abcz","abcdefghijklmnopqrstuvwxyz")
