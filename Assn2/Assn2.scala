@@ -240,8 +240,42 @@ object Assn2 {
       case (a:Type,b:Type) => PairTy(a,b)
       case _ => sys.error("invalid pair")
     }
+    case First(e) => tyOf(ctx,e) match {
+      case PairTy(a:Type,_) => a
+      case _ => sys.error("First takes a pair as argument")
+    }
+    case Second(e) => tyOf(ctx,e) match {
+      case PairTy(_,b:Type) => b
+      case _ => sys.error("Second takes a pair as argument")
+    }
 
-    case _ => sys.error("tyOf: todo")
+    // function
+    case Apply(e1,e2) => (tyOf(ctx,e1),tyOf(ctx,e2)) match {
+      case (FunTy(a:Type,b:Type),c:Type) if c == a => b
+      case _ => sys.error("invalid function or argument type") 
+    }
+    case Lambda(x,ty,e) => (ty,tyOf(ctx + (x->ty),e)) match {
+      case (ty: Type,tye: Type) => FunTy(ty,tye)
+      case _ => sys.error("invalid lambda function.") 
+    }
+    case Rec(f,x,tyx,ty,e) => (tyx,tyOf(ctx + (f -> FunTy(tyx,ty), x -> tyx),e)) match {
+      case (tyx: Type,tye: Type) => FunTy(tyx,tye)
+      case _ => sys.error("invalid recursive function")
+    }
+    case LetPair(x,y,e1,e2) => (tyOf(ctx,e1),e2) match {
+      case (PairTy(a:Type,b:Type),e2:Expr) => (tyOf(ctx + (x->a,y->b),e2))
+      case _ => sys.error("invalid let pair statement")
+    }
+    case LetFun(f,arg,ty,e1,e2) => (ty,tyOf(ctx+(arg->ty),e1),e2) match {
+      case (tao1:Type,tao2:Type,e2:Expr) => tyOf(ctx + (f->FunTy(tao1,tao2)),e2)
+      case _ => sys.error("invalid function declaration with let")
+    }
+    case LetRec(f,arg,xty,ty,e1,e2) => (xty,tyOf(ctx+(f->FunTy(xty,ty),arg->xty),e1),e2) match {
+      case (tao1:Type,tao2:Type,e2:Expr) => tyOf(ctx+(f->FunTy(tao1,tao2)),e2)
+      case _ => sys.error("invalid recursive function declaration with  let rec")
+    }
+
+    case _ => sys.error("type checking failed.")
 
   }
 
@@ -315,6 +349,12 @@ object Assn2 {
       case Minus(t1,t2) => Minus(subst(t1,e2,x),subst(t2,e2,x))
       case Times(t1,t2) => Times(subst(t1,e2,x),subst(t2,e2,x))
 
+      case IfThenElse(t,t1,t2) => IfThenElse(subst(t,e2,x),subst(t1,e2,x),subst(t2,e2,x))
+      case Str(s) => Str(s)
+      case Length(t) => Length(subst(t,e2,x))
+      case Index(t1,t2) => Index(subst(t1,e2,x),subst(t2,e2,x))
+      case Concat(t1,t2) => Concat(subst(t1,e2,x),subst(t2,e2,x)) 
+
       case Var(y) =>
         if (x == y) {
           e2
@@ -327,7 +367,48 @@ object Assn2 {
         Let(z,subst(t1,e2,x),subst(fresh_t2,e2,x))
       }
 
-      case _ => sys.error("subst: todo")
+      case Bool(b) => Bool(b)
+      case Eq(t1,t2) => Eq(subst(t1,e2,x),subst(t2,e2,x))
+      
+      case Pair(t1,t2) => Pair(subst(t1,e2,x),subst(t2,e2,x))
+      case First(t) => First(subst(t,e2,x))
+      case Second(t) => Second(subst(t,e2,x))
+
+      case Apply(t1,t2) => Apply(subst(t1,e2,x),subst(t2,e2,x))
+      case Lambda(y,ty,t) => {
+        val z = Gensym.gensym(y)
+        val fresh_t = swap(t,y,z)
+        Lambda(z,ty,subst(fresh_t,e2,x)) 
+      }
+      case Rec(f,y,yty,ty,t) => {
+        val z = Gensym.gensym(y)
+        val g = Gensym.gensym(f)
+        val fresh_t = swap(swap(t,y,z),f,g)
+        Rec(g,z,yty,ty,subst(fresh_t,e2,x))
+      }
+       
+      case LetPair(y1,y2,t1,t2) => {
+        val z1 = Gensym.gensym(y1)
+        val z2 = Gensym.gensym(y2)
+        val fresh_t2 = swap(swap(t2,y1,z1),y2,z2)
+        LetPair(z1,z2,subst(t1,e2,x),subst(fresh_t2,e2,x))  
+      }
+      case LetFun(f,y,ty,t1,t2) => {
+        val z = Gensym.gensym(y)
+        val g = Gensym.gensym(f)
+        val fresh_t1 = swap(t1,y,z)
+        val fresh_t2 = swap(t1,f,g)
+        LetFun(g,z,ty,subst(fresh_t1,e2,x),subst(fresh_t2,e2,x))
+      }
+      case LetRec(f,y,yty,ty,t1,t2) => {
+        val z = Gensym.gensym(y)
+        val g = Gensym.gensym(f)
+        val fresh_t1 = swap(swap(t1,f,g),y,z)
+        val fresh_t2 = swap(t2,f,g)
+        LetRec(g,z,yty,ty,subst(fresh_t1,e2,x),subst(fresh_t2,e2,x))
+      }
+
+      case _ => sys.error("subst failed")
     }
 
 
@@ -342,7 +423,35 @@ object Assn2 {
     case Minus(e1,e2) => Minus(desugar(e1),desugar(e2))
     case Times(e1,e2) => Times(desugar(e1),desugar(e2))
 
-    case _ => sys.error("desugar: todo")
+    case Bool(b) => Bool(b)
+    case Eq(e1,e2) => Eq(desugar(e1),desugar(e2))
+    case IfThenElse(e,e1,e2) => IfThenElse(desugar(e),desugar(e1),desugar(e2))
+
+    case Str(s) => Str(s)
+    case Length(e) => Length(desugar(e))
+    case Index(e1,e2) => Index(desugar(e1),desugar(e2))
+    case Concat(e1,e2) => Concat(desugar(e1),desugar(e2))    
+
+    case Var(x) => Var(x)
+    case Let(x,e1,e2) => Let(x,desugar(e1),desugar(e2))
+    
+    case Pair(e1,e2) => Pair(desugar(e1),desugar(e2))
+    case First(e) => First(desugar(e))
+    case Second(e) => Second(desugar(e))
+
+
+    case Lambda(x,ty,e) => Lambda(x,ty,desugar(e))
+    case Apply(e1,e2) => Apply(desugar(e1),desugar(e2))
+    case Rec(f,x,xty,ty,e) => Rec(f, x, xty,ty,desugar(e))
+    
+    case LetPair(x,y,e1,e2) => {
+      val p = Gensym.gensym("p")
+      Let( p, e1, subst(subst(e2,First(e1),x),Second(e1),y)) 
+    }
+    case LetFun(f,y,ty,e1,e2) => Let(f,Lambda(y,ty,e1),e2)
+    case LetRec(f,x,xty,ty,e1,e2) => Let(f,Rec(f,x,xty,ty,e1),e2)
+
+    case _ => sys.error("desugar: failed")
 
   }
 
@@ -658,6 +767,5 @@ object Assn2 {
     }
   }
 }
-
 
 
