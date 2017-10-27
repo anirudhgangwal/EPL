@@ -151,7 +151,7 @@ object Assn2 {
       eval(env + (x -> eval(env,e1)),e2)
     }
     
-    //Pairing
+    //Pair
     case Pair(e1,e2) => PairV(eval(env,e1),eval(env,e2))
     case First(e) => eval(env,e) match {
       case PairV(e1,e2) => e1
@@ -201,11 +201,48 @@ object Assn2 {
       case _ => sys.error("non-integer arguments to *")
     }
 
+    // Boolean
+    case Bool(b) => BoolTy
+    case Eq(e1,e2) => (tyOf(ctx,e1),tyOf(ctx,e2)) match {
+      case (IntTy,IntTy) => BoolTy
+      case (BoolTy,BoolTy) => BoolTy
+      case (StringTy,StringTy) => BoolTy
+      case _ => sys.error("given arguments to eq have different types") 
+    }
+    case IfThenElse(e,e1,e2) => (tyOf(ctx,e),tyOf(ctx,e1),tyOf(ctx,e2)) match {
+      case (BoolTy,a: Type,b: Type) if a == b => a
+      case (_,a: Type,b: Type) if a == b => sys.error("Non-boolean if statement")
+      case (BoolTy,a: Type,b: Type) => sys.error("then and else have different return types")
+      case _ => sys.error("Invalid IfThenElse statement")
+    }
+
+    // String
+    case Str(s) => StringTy
+    case Length(s) => tyOf(ctx,s) match {
+      case StringTy => IntTy
+      case _ => sys.error("length takes string argument")
+    }
+    case Index(e1,e2) => (tyOf(ctx,e1),tyOf(ctx,e2)) match {
+      case (StringTy,IntTy) => StringTy
+      case _ => sys.error("index takes a  string and integer")
+    }
+    case Concat(e1,e2) => (tyOf(ctx,e1),tyOf(ctx,e2)) match {
+      case (StringTy,StringTy) => StringTy
+      case _ => sys.error("concat requires two strings")
+    }
+
     // Variables and let-binding
     case Var(x) => ctx(x)
     case Let(x,e1,e2) => tyOf(ctx + (x -> (tyOf(ctx,e1))), e2)
 
+    // Pairs
+    case Pair(e1,e2) => (tyOf(ctx,e1),tyOf(ctx,e2)) match {
+      case (a:Type,b:Type) => PairTy(a,b)
+      case _ => sys.error("invalid pair")
+    }
+
     case _ => sys.error("tyOf: todo")
+
   }
 
 
