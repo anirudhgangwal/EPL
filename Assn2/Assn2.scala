@@ -446,7 +446,7 @@ object Assn2 {
     
     case LetPair(x,y,e1,e2) => {
       val p = Gensym.gensym("p")
-      Let( p, e1, subst(subst(e2,First(e1),x),Second(e1),y)) 
+      Let( p, e1, subst(subst(desugar(e2),First(e1),x),Second(e1),y)) 
     }
     case LetFun(f,y,ty,e1,e2) => Let(f,Lambda(y,ty,e1),e2)
     case LetRec(f,x,xty,ty,e1,e2) => Let(f,Rec(f,x,xty,ty,e1),e2)
