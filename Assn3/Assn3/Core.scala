@@ -139,7 +139,44 @@ object Core {
   def eval(expr: Expr): Value = expr match {
     case v: Value => v
     case Var(_) => sys.error("Cannot evaluate a variable -- this should have been substituted!")
-    case _ => sys.error("TODO -- fill me in!")
+    case LetIn(x,e1,e2) => eval(subst(e2,eval(e1),x)) // outer most eval necessary
+    case Apply(e1,e2) => (eval(e1),eval(e2)) match {
+      case (Lambda(x,e),v1) => eval(subst(e,v1,x))
+    }
+    case BinOp(EqOp,e1,e2) => (eval(e1),eval(e2)) match {
+      case (NumV(v1),NumV(v2)) => if (v1==v2) BoolV(true) else BoolV(false)
+      case (BoolV(v1),BoolV(v2)) => if (v1==v2) BoolV(true) else BoolV(false)
+      case (StrV(v1),StrV(v2)) => if (v1==v2) BoolV(true) else BoolV(false)
+    }
+    case IfThenElse(e,e1,e2) => if (eval(e)==BoolV(true)) eval(e1) else eval(e2)
+    case BinOp(op,e1,e2) => (op,eval(e1),eval(e2)) match {
+      case (AddOp,Num(v1),Num(v2)) => NumV(v1+v2)
+      case (SubOp,Num(v1),Num(v2)) => NumV(v1-v2)
+      case (MulOp,Num(v1),Num(v2)) => NumV(v1*v2)
+      case (DivOp,Num(v1),Num(v2)) => NumV(v1/v2)
+      case (AndOp,BoolV(v1),BoolV(v2)) => BoolV(v1 && v2)
+      case (OrOp,BoolV(v1),BoolV(v2)) => BoolV(v1 || v2)
+    }
+    case NotOp(e) => eval(e) match {
+      case BoolV(v) => BoolV(!v)
+    }
+    case Object(methods) => ObjectV(methods)
+    case Invoke(obj,lj) => eval(obj) match {
+      case ObjectV(methods) => if (methods contains lj) {
+        methods(lj) match {
+          case Method(selfbinder,body) => eval(subst(body,selfbinder,eval(obj)))        
+        }
+      } else {sys.error("Label not in object.")}
+    }
+    case Update(obj,methodlabel,newmethod) => eval(obj) match {
+      case ObjectV(methods) => {
+        val v2 = methods + (methodlabel -> newmethod)
+        ObjectV(v2)
+      }
+    }
+    
+    
+    case _ => sys.error("Evaluation failed.")
   }
 }
 
