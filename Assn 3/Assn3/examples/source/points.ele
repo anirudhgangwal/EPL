@@ -1,0 +1,46 @@
+type Colour = Object(X)[ red: Int; green: Int; blue: Int] in
+type Point = Object(X)[ x: Int; eq: (X) -> Bool; typeString: String; mv: (Int) -> X ] in
+type CPoint = Object(Y)[
+  x: Int;
+  eq: (Point) -> Bool;
+  c: Colour;
+  typeString: String;
+  setColour: (Colour) -> Y;
+  mv: (Int) -> Point] in
+
+let red = object(self: Colour) {
+  red = 255;
+  green = 0;
+  blue = 0
+} in
+let green = object(self: Colour) {
+  red = 0;
+  green = 255;
+  blue = 0
+} in
+let blue = object(self: Colour) {
+  red = 0;
+  green = 0;
+  blue = 255
+} in
+
+let pointClass =
+  class(this: Point) {
+    x = 0;
+    eq = fun(other: Point) { this.x == (other.x) };
+    mv = fun(dx: Int) { this.x := ((this.x) + dx) };
+    typeString = "Plain point"
+  } in
+
+let colouredPointClass =
+  class(this: CPoint) extends (pointClass: Class(Point)) {
+    setColour = fun(c: Colour) { this.c := c };
+    c = red
+  } overrides {
+    x = 0;
+    typeString = "Coloured point"
+  } in
+
+let colPt = (new colouredPointClass) in
+let pt = colPt.mv(100) in
+pt.x

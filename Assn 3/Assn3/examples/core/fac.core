@@ -1,0 +1,1 @@
+([ fac = (self) => \y. if (y == 0) then 1 else y * (self.fac(y - 1))]).fac(10)

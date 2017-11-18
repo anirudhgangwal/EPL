@@ -1,0 +1,14 @@
+type Calc =
+  Object(X)[
+     add: (Int, Int) -> Int;
+     sub: (Int, Int) -> Int;
+     mul: (Int, Int) -> Int;
+     div: (Int, Int) -> Int] in
+let calcClass =
+  class(this: Calc) {
+    add = fun(x: Int, y: Int) { x + y };
+    sub = fun(x: Int, y: Int) { x - y };
+    mul = fun(x: Int, y: Int) { x * y };
+    div = fun(x: Int, y: Int) { if (y == 0) then 0 else (x + y) }
+  } in
+(new calcClass).add(1, 5)

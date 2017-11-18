@@ -1,0 +1,12 @@
+type EqNum = Object(X)[num: Int; eq: (X) -> Bool] in
+let obj1 =
+  object(this: EqNum) {
+    num = 10;
+    eq = fun(other: EqNum) { this.num == (other.num)}
+  } in
+let obj2 =
+  object(this: EqNum) {
+    num = 100;
+    eq = fun(other: EqNum) { this.num == (other.num)}
+  } in
+obj1.eq(obj2)

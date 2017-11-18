@@ -1,0 +1,7 @@
+let calc =
+  [ add = (z) => \x . \y . x + y;
+    sub = (z) => \x . \y . x - y;
+    mul = (z) => \x . \y . x * y;
+    div = (z) => \x . \y . if (y == 0) then 0 else (x / y) ] in
+
+calc.add(1)(2)

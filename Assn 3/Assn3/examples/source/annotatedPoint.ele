@@ -1,0 +1,10 @@
+type Point = Object(X)[x: Int; y: Int] in
+type AnnotatedPoint = Object(X)[x: Int; y: Int; label: String] in
+let pointClass = class(this: Point) { x = 100; y = 0 } in
+let annotatedPointClass =
+  class(this: AnnotatedPoint) extends (pointClass: Class(Point)) {
+    label = "origin"
+  } overrides {
+    x = 0
+  } in
+(new annotatedPointClass).label
