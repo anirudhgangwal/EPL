@@ -98,9 +98,37 @@ object Core {
         case NotOp(t) => NotOp(subst(t,e2,x))
         case LetIn(y,t1,t2) => {
           val z = Gensym.gensym(y)
+          val fresh_t2 = swap(t2,y,z)
+          LetIn(z,subst(t1,e2,x),subst(fresh_t2,e2,x))
+        }
+        case Lambda(y,t) => {
+          val z = Gensym.gensym(y)
+          val fresh_t = swap(t,y,z)
+          Lambda(z,subst(fresh_t,e2,x))        
+        }
+        case Apply(t1,t2) => Apply(subst(t1,e2,x),subst(t2,e2,x))
+        case Object(methods) => {
+          var new_methods = new scala.collection.mutable.ListMap[Label, Method]()
+          for ((label,method) <- methods) {
+            (label,method) match {
+              case (label:Label,Method(selfbinder,body)) => {
+                val z = Gensym.gensym(selfbinder)
+                val fresh_body = swap(body,selfbinder,z)
+                new_methods(label) = Method(z,subst(fresh_body,e2,x))
+              }
+            }
+          }
+          val listMap = ListMap(new_methods.toList : _*)
+          Object(listMap)
+        }
+        case Invoke(obj,methodlabel) => Invoke(subst(obj,e2,x),methodlabel)
+        case Update(obj,methodLabel,Method(selfbinder,body)) => {
+          val z = Gensym.gensym(selfbinder)
+          val fresh_body = swap(body,selfbinder,z)
+          Update(subst(obj,e2,x),methodLabel,Method(z,subst(fresh_body,e2,x)))
+        }
           
-        }  
-        case _ => sys.error("TODO -- fill me in!")
+        case _ => sys.error("Substitution Failed.")
       }
     }
 
