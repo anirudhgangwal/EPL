@@ -235,35 +235,80 @@ object Source {
       // Exercise 4
       case New(e) => tc(e) match {
         case TyClass(ty) => ty match {
-          TyObject(bnd,fields) => ty
+          case TyObject(bnd,fields) => ty
         }
       }
-      
-      
 
-      case _ => sys.error("TODO -- fill me in!")
+      case RootClass => TyClass(TyObject("X",ListMap()))
+      
+      case Class(selfBinder,selfType,extendsData,fields,overriddenMethods) => selfType match {
+        case TyObject(bnd,fieldsTy) => {
+          extendsData match {
+            case None => TyClass(selfType) // do nothing and return type
+            case Some((supclassExpr,supClassType)) => {
+              // class extends
+
+              var dec = List[Label]() // Strore declared labels according to Object type
+              var inh = List[Label]() // Strore inherited labels according to Object type
+              var ovr = List[Label]() // Store overridden labels
+
+              supClassType match {
+                // type of super class is a class
+
+                case TyClass(TyObject(bnd2,fieldsTy2)) => { 
+  
+                  // Class must be a subtype of super class
+                  if (!subtypeOf(selfType,TyObject(bnd2,fieldsTy2))) {sys.error("Class not a subtype of super.")} 
+                  // Type of the super class expression must be type of super class as defined. 
+                  assertTy(supclassExpr,TyClass(TyObject(bnd2,fieldsTy2)))                  
+
+                  for ((label,ty) <- fieldsTy) {  // Store declared and inherited labels
+                    if (!fieldsTy2.contains(label)) {dec = dec++List(label)} else {inh = inh++List(label)}
+                  }
+
+                  for ((l,expr) <- fields) {  // Check all fields are declared in the type.
+                    if(!dec.contains(l)) {sys.error("Field not declared in object type.")}
+                  } 
+                  
+                  for ((label,ty) <- fieldsTy) {  // store overridden methods
+                    if (fieldsTy2.contains(label) && overriddenMethods.contains(label)) {ovr = ovr++List(label)}
+                  }
+                  for (l <- inh) {  // Check inherited method not overridden in fields, should be in overriddenMethods
+                    if(fields.contains(l)) {sys.error("Overridden methods must be declared in overridden block.")}
+                  } 
+            
+
+                  // Declared labels
+                  for (l <- dec) {
+                    if(!equivTypes( typeCheck(termEnv+(selfBinder->selfType),fields(l)),typeSubst(fieldsTy(l),selfType,bnd))) {
+                      sys.error("Declared types don't match.")
+                    }   
+                  }
+                  // Inherited labels
+                  for (l <- inh) {
+                    if(!equivTypes(typeSubst(fieldsTy2(l),supClassType,bnd),typeSubst(fieldsTy(l),selfType,bnd))) {
+                      sys.error("Inherited label type don't match.")
+                    }
+                  }
+                  // Overridden labels
+                  for (l <- ovr) {
+                    if (!equivTypes(typeCheck(termEnv+(selfBinder->selfType),overriddenMethods(l)),typeSubst(fieldsTy(l),selfType,bnd)) ) {
+                      sys.error("Overridden methods type don't match.")
+                    }
+                  }
+                
+                TyClass(selfType)
+                }       
+              }
+            }          
+          }
+        }
+      }
+      case _ => sys.error("Source language type checking failed.")
     }
   }
 }
-//class MethodUpdate(
-//    obj: Expr,
-//    methodLabel: Label,
-//    selfVar: Variable,
-//    selfTy: Type,
-//    newBody: Expr)
 
-// class FieldUpdate(obj: Expr, fieldLabel: Label, newBody: Expr)
-// class SelectField(obj: Expr, methodLabel: Label)
-// TyObject(bnd: TypeVariable, fields: ListMap[Label, Type])
-// case class Object(
-   // selfBinder: TypeVariable,                 // Name of the self binder
-   // selfTy: Type,                   // Type of the object
-   // fields: ListMap[Label, Expr]) 
- 
-      // TyFun(args: List[Type], res: Type) extends Type
-      // Func(params: List[(Variable, Type)], body: Expr)
-      // Apply(e: Expr, args: List[Expr]) 
-      // LetIn(x: TermVariable, e1: Expr, e2: Expr) 
 
 
 // vim: set ts=2 sw=2 et sts=2:
