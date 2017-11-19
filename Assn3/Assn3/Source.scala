@@ -240,7 +240,8 @@ object Source {
       }
 
       case RootClass => TyClass(TyObject("X",ListMap()))
-      
+     
+
       case Class(selfBinder,selfType,extendsData,fields,overriddenMethods) => selfType match {
         case TyObject(bnd,fieldsTy) => {
           extendsData match {
@@ -248,7 +249,7 @@ object Source {
             case Some((supclassExpr,supClassType)) => {
               // class extends
 
-              var dec = List[Label]() // Strore declared labels according to Object type
+              var dec = List[Label]() // Store declared labels according to Object type
               var inh = List[Label]() // Strore inherited labels according to Object type
               var ovr = List[Label]() // Store overridden labels
 
@@ -287,13 +288,13 @@ object Source {
                   // Inherited labels
                   for (l <- inh) {
                     if(!equivTypes(typeSubst(fieldsTy2(l),supClassType,bnd),typeSubst(fieldsTy(l),selfType,bnd))) {
-                      sys.error("Inherited label type don't match.")
+                      sys.error("Inherited label types don't match.")
                     }
                   }
                   // Overridden labels
                   for (l <- ovr) {
                     if (!equivTypes(typeCheck(termEnv+(selfBinder->selfType),overriddenMethods(l)),typeSubst(fieldsTy(l),selfType,bnd)) ) {
-                      sys.error("Overridden methods type don't match.")
+                      sys.error("Overridden method types don't match.")
                     }
                   }
                 
