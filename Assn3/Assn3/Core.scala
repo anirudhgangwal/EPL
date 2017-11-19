@@ -139,9 +139,10 @@ object Core {
   def eval(expr: Expr): Value = expr match {
     case v: Value => v
     case Var(_) => sys.error("Cannot evaluate a variable -- this should have been substituted!")
-    case LetIn(x,e1,e2) => eval(subst(e2,eval(e1),x)) // outer most eval necessary
-    case Apply(e1,e2) => (eval(e1),eval(e2)) match {
-      case (Lambda(x,e),v1) => eval(subst(e,v1,x))
+    case LetIn(x,e1,e2) => eval(subst(e2,eval(e1),x)) // outer most eval necessary?
+    case Lambda(f,arg) => LambdaV(f,arg)
+    case Apply(f,arg) => eval(f) match {     
+      case LambdaV(x,e) => eval(subst(e,eval(arg),x))
     }
     case BinOp(EqOp,e1,e2) => (eval(e1),eval(e2)) match {
       case (NumV(v1),NumV(v2)) => if (v1==v2) BoolV(true) else BoolV(false)
@@ -150,10 +151,10 @@ object Core {
     }
     case IfThenElse(e,e1,e2) => if (eval(e)==BoolV(true)) eval(e1) else eval(e2)
     case BinOp(op,e1,e2) => (op,eval(e1),eval(e2)) match {
-      case (AddOp,Num(v1),Num(v2)) => NumV(v1+v2)
-      case (SubOp,Num(v1),Num(v2)) => NumV(v1-v2)
-      case (MulOp,Num(v1),Num(v2)) => NumV(v1*v2)
-      case (DivOp,Num(v1),Num(v2)) => NumV(v1/v2)
+      case (AddOp,NumV(v1),NumV(v2)) => NumV(v1+v2)
+      case (SubOp,NumV(v1),NumV(v2)) => NumV(v1-v2)
+      case (MulOp,NumV(v1),NumV(v2)) => NumV(v1*v2)
+      case (DivOp,NumV(v1),NumV(v2)) => NumV(v1/v2)
       case (AndOp,BoolV(v1),BoolV(v2)) => BoolV(v1 && v2)
       case (OrOp,BoolV(v1),BoolV(v2)) => BoolV(v1 || v2)
     }
@@ -164,7 +165,7 @@ object Core {
     case Invoke(obj,lj) => eval(obj) match {
       case ObjectV(methods) => if (methods contains lj) {
         methods(lj) match {
-          case Method(selfbinder,body) => eval(subst(body,selfbinder,eval(obj)))        
+          case Method(selfbinder,body) => eval(subst(body,eval(obj),selfbinder))        
         }
       } else {sys.error("Label not in object.")}
     }
