@@ -21,10 +21,17 @@ object Desugar {
   def desugar(e: Expr): Core.Expr = e match {
     case Var(v) => Core.Var(v)
 
+     case RootClass => {
+      val x = Gensym.gensym("X")
+      Core.Object( ListMap[Core.Label,Core.Method]("new"->Core.Method(x,Core.Object(new ListMap[Core.Label, Core.Method]()))))
+    }
+
     case Class(selfBnd, selfTy, extendsData, methods, overridden) => {
         // Here, we suggest a skeleton implementation. Feel free to rewrite
         // this with your own, if you like!
-
+  
+        val fresh_z = Gensym.gensym("z")        
+  
         val (superclass, superty) = extendsData match {
           case Some((expr, ty)) => (expr, ty)
           case None => (RootClass, TyClass(TyObject("X", ListMap())))
@@ -37,24 +44,49 @@ object Desugar {
         }
 
         def getInheritedLabels(): Set[Label] = {
-          sys.error("TODO: Fill me in!")
+          var l = Set[Label]()
+          for ((label,_) <- superFields) {
+            if (!overridden.contains(label)) {l=l+label} // inherited method can't be in declared, will not typecheck.
+          }
+          l // return l
         }
 
         def generateNewMethod(): Core.Method = {
-          sys.error("TODO: Fill me in!")
+          var lm = ListMap[Core.Label,Core.Method]()     
+          val fresh_s = Gensym.gensym("s")     
+          selfTy match {
+            case TyObject(selfLabel,selfFields) => {
+              for ((lbl,typ) <- selfFields) {
+                lm = lm + (lbl -> Core.Method(fresh_s,Core.Apply(Core.Invoke(Core.Var(fresh_z),lbl),Core.Var(fresh_s)) ))
+              } // Core.Var() --> COrrect??
+            } 
+          }
+          Core.Method(fresh_z,Core.Object(lm)) 
         }
 
         // Generate fields for inherited (non-defined) methods
         def generateInheritedMethods(inheritedLabels: Set[Label]): ListMap[Core.Label, Core.Method] = {
-          sys.error("TODO: Fill me in!")
+            var lm = ListMap[Core.Label,Core.Method]()
+            for (lbl <- inheritedLabels) {
+              lm = lm + (lbl -> Core.Method(fresh_z,Core.Invoke(desugar(superclass),lbl)))
+            }
+            lm
         }
 
         def generateDeclaredMethods(): ListMap[Core.Label, Core.Method] = {
-          sys.error("TODO: Fill me in!")
+          var lm = ListMap[Core.Label,Core.Method]()
+          for ((lbl,exp) <- methods) {
+            lm = lm + (lbl -> Core.Method(fresh_z,Core.Lambda(selfBnd,desugar(exp))))
+          }
+          lm
         }
 
         def generateOverriddenMethods(): ListMap[Core.Label, Core.Method] = {
-          sys.error("TODO: Fill me in!")
+          var lm = ListMap[Core.Label,Core.Method]()
+          for ((lbl,exp) <- overridden) {
+            lm = lm + (lbl -> Core.Method(fresh_z,Core.Lambda(selfBnd,desugar(exp))))
+          }
+          lm
         }
 
 
@@ -110,11 +142,6 @@ object Desugar {
       Core.Object(new_methods)
     }  
 
-    case RootClass => {
-      val x = Gensym.gensym("X")
-      Core.Object( ListMap[Core.Label,Core.Method]("new"->Core.Method(x,Core.Object(new ListMap[Core.Label, Core.Method]()))))
-    }
-
     case Func(params,body) => {
       var l = Core.Lambda(params.reverse(0)._1,desugar(body))
       for ((variable,_) <- params.reverse.drop(1)) {
@@ -127,7 +154,7 @@ object Desugar {
       var ap = Core.Apply(desugar(e),desugar(args(0)))
       val args2 = args.drop(1)
       for (i <- args2) {
-        ap = Core.Apply(ap,desugar(i))    // Desugar ap as well??
+        ap = Core.Apply(ap,desugar(i))  
       }
       ap
     }
